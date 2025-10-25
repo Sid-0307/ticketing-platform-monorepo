@@ -3,9 +3,10 @@ import {
   BadRequestException,
   NotFoundException,
 } from "@nestjs/common";
-import { db, bookings, events, Booking, Event } from "@repo/database";
+import { db, bookings, events, Booking } from "@repo/database";
 import { eq } from "drizzle-orm";
 import { PricingService } from "./pricing.service";
+import { EventsService } from "./events.service";
 
 interface CreateBookingDto {
   eventId: number;
@@ -15,7 +16,10 @@ interface CreateBookingDto {
 
 @Injectable()
 export class BookingsService {
-  constructor(private readonly pricingService: PricingService) {}
+  constructor(
+    private readonly pricingService: PricingService,
+    private readonly eventsService: EventsService
+  ) {}
 
   async create(dto: CreateBookingDto): Promise<Booking> {
     if (!dto.eventId || !dto.userEmail || !dto.quantity) {
@@ -30,50 +34,50 @@ export class BookingsService {
       throw new BadRequestException("Invalid email format");
     }
 
-    const eventResult = await db
-      .select()
-      .from(events)
-      .where(eq(events.id, dto.eventId));
-
-    if (!eventResult[0]) {
-      throw new NotFoundException(`Event with ID ${dto.eventId} not found`);
-    }
-
-    const event = eventResult[0];
-
-    const availableTickets = event.totalTickets - event.bookedTickets;
-    if (availableTickets < dto.quantity) {
-      throw new BadRequestException(
-        `Not enough tickets available. Only ${availableTickets} tickets remaining.`
+    return await db.transaction(async (tx) => {
+      const event = await this.eventsService.lockEventForUpdate(
+        dto.eventId,
+        tx
       );
-    }
 
-    const pricing = await this.pricingService.calculatePrice(event);
-    const totalPrice = pricing.finalPrice * dto.quantity;
+      if (!event) {
+        throw new NotFoundException(`Event with ID ${dto.eventId} not found`);
+      }
 
-    const bookingResult = await db
-      .insert(bookings)
-      .values({
-        eventId: dto.eventId,
-        userEmail: dto.userEmail,
-        quantity: dto.quantity,
-        totalPrice: totalPrice.toFixed(2),
-      })
-      .returning();
+      const availableTickets = event.totalTickets - event.bookedTickets;
+      if (availableTickets < dto.quantity) {
+        throw new BadRequestException(
+          `Not enough tickets available. Only ${availableTickets} tickets remaining.`
+        );
+      }
 
-    if (!bookingResult[0]) {
-      throw new BadRequestException("Failed to create booking");
-    }
+      const pricing = await this.pricingService.calculatePrice(event);
+      const totalPrice = pricing.finalPrice * dto.quantity;
 
-    await db
-      .update(events)
-      .set({
-        bookedTickets: event.bookedTickets + dto.quantity,
-        updatedAt: new Date(),
-      })
-      .where(eq(events.id, dto.eventId));
+      const bookingResult = await tx
+        .insert(bookings)
+        .values({
+          eventId: dto.eventId,
+          userEmail: dto.userEmail,
+          quantity: dto.quantity,
+          totalPrice: totalPrice.toFixed(2),
+        })
+        .returning();
 
-    return bookingResult[0];
+      if (!bookingResult[0]) {
+        throw new BadRequestException("Failed to create booking");
+      }
+
+      await tx
+        .update(events)
+        .set({
+          bookedTickets: event.bookedTickets + dto.quantity,
+          updatedAt: new Date(),
+        })
+        .where(eq(events.id, dto.eventId));
+
+      return bookingResult[0];
+    });
   }
 
   async findByEventId(eventId: number): Promise<Booking[]> {

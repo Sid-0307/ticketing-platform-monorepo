@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Event, bookings } from "@repo/database";
 import { db } from "@repo/database";
 import { eq, and, gte } from "drizzle-orm";
+import { RedisService } from "../redis/redis.service";
 
 interface PricingBreakdown {
   basePrice: number;
@@ -15,6 +16,8 @@ interface PricingBreakdown {
 
 @Injectable()
 export class PricingService {
+  constructor(private readonly redisService: RedisService) {}
+
   private readonly TIME_WEIGHT = parseFloat(process.env.TIME_WEIGHT || "0.3");
   private readonly DEMAND_WEIGHT = parseFloat(
     process.env.DEMAND_WEIGHT || "0.4"
@@ -59,7 +62,7 @@ export class PricingService {
     } else if (percentRemaining <= 0.5) {
       return 0.15; // +15%
     } else {
-      return 0; // No adjustment
+      return 0;
     }
   }
 
@@ -84,53 +87,59 @@ export class PricingService {
     } else if (bookingCount >= 3) {
       return 0.1; // +10%
     } else {
-      return 0; // No adjustment
+      return 0;
     }
   }
 
   async calculatePrice(event: Event): Promise<PricingBreakdown> {
-    const basePrice = parseFloat(event.basePrice);
-    const minPrice = parseFloat(event.minPrice);
-    const maxPrice = parseFloat(event.maxPrice);
+    return this.redisService.getOrSet(
+      `pricing:${event.id}:${event.bookedTickets}`,
+      async () => {
+        const basePrice = parseFloat(event.basePrice);
+        const minPrice = parseFloat(event.minPrice);
+        const maxPrice = parseFloat(event.maxPrice);
 
-    const timeAdjustment = this.calculateTimeAdjustment(event.date);
-    const inventoryAdjustment = this.calculateInventoryAdjustment(
-      event.totalTickets,
-      event.bookedTickets
+        const timeAdjustment = this.calculateTimeAdjustment(event.date);
+        const inventoryAdjustment = this.calculateInventoryAdjustment(
+          event.totalTickets,
+          event.bookedTickets
+        );
+        const demandAdjustment = await this.calculateDemandAdjustment(event.id);
+
+        const totalAdjustment =
+          timeAdjustment * this.TIME_WEIGHT +
+          demandAdjustment * this.DEMAND_WEIGHT +
+          inventoryAdjustment * this.INVENTORY_WEIGHT;
+
+        let finalPrice = basePrice * (1 + totalAdjustment);
+
+        let appliedFloor = false;
+        let appliedCeiling = false;
+
+        if (finalPrice < minPrice) {
+          finalPrice = minPrice;
+          appliedFloor = true;
+        }
+
+        if (finalPrice > maxPrice) {
+          finalPrice = maxPrice;
+          appliedCeiling = true;
+        }
+
+        finalPrice = Math.round(finalPrice * 100) / 100;
+
+        return {
+          basePrice,
+          timeAdjustment,
+          demandAdjustment,
+          inventoryAdjustment,
+          finalPrice,
+          appliedFloor,
+          appliedCeiling,
+        };
+      },
+      15
     );
-    const demandAdjustment = await this.calculateDemandAdjustment(event.id);
-
-    const totalAdjustment =
-      timeAdjustment * this.TIME_WEIGHT +
-      demandAdjustment * this.DEMAND_WEIGHT +
-      inventoryAdjustment * this.INVENTORY_WEIGHT;
-
-    let finalPrice = basePrice * (1 + totalAdjustment);
-
-    let appliedFloor = false;
-    let appliedCeiling = false;
-
-    if (finalPrice < minPrice) {
-      finalPrice = minPrice;
-      appliedFloor = true;
-    }
-
-    if (finalPrice > maxPrice) {
-      finalPrice = maxPrice;
-      appliedCeiling = true;
-    }
-
-    finalPrice = Math.round(finalPrice * 100) / 100;
-
-    return {
-      basePrice,
-      timeAdjustment,
-      demandAdjustment,
-      inventoryAdjustment,
-      finalPrice,
-      appliedFloor,
-      appliedCeiling,
-    };
   }
 
   async calculatePricesForEvents(

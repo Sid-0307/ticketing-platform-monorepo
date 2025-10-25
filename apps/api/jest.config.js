@@ -7,7 +7,7 @@ module.exports = {
     "^.+\\.ts$": "ts-jest",
   },
   collectCoverageFrom: [
-    "src/**/pricing.service.ts",
+    "src/**/*.ts",
     "!src/**/*.d.ts",
     "!src/**/index.ts",
     "!src/main.ts",
