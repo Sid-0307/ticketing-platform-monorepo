@@ -44,7 +44,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-20 text-center">
-        <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
+        <h1 className="text-5xl md:text-5xl font-bold text-gray-900 mb-6">
           Experience Events Like Never Before
         </h1>
         <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
@@ -221,4 +221,4 @@ export default function HomePage() {
   );
 }
 
-export const revalidate = 60;
+export const revalidate = 0;

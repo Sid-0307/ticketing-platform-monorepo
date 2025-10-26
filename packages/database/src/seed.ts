@@ -1,5 +1,8 @@
+import { sql } from "drizzle-orm";
 import { db, events } from "./index";
+import "dotenv/config";
 import postgres from "postgres";
+import Redis from "ioredis";
 
 const sampleEvents = [
   {
@@ -109,8 +112,18 @@ async function seed() {
   try {
     console.log("Seeding database...");
 
+    console.log("Clearing Redis cache...");
+    const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
+    await redis.flushall();
+    await redis.quit();
+    console.log("Redis cache cleared!");
+
     console.log("Clearing existing events...");
     await db.delete(events);
+
+    console.log("Resetting sequence...");
+    await db.execute(sql`ALTER SEQUENCE events_id_seq RESTART WITH 1`);
+    await db.execute(sql`ALTER SEQUENCE bookings_id_seq RESTART WITH 1`);
 
     console.log("Inserting sample events...");
     const insertedEvents = await db

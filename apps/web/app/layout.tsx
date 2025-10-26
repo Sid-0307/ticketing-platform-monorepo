@@ -38,7 +38,7 @@ function Navigation() {
           <div className="flex items-center space-x-6">
             <Link
               href="/events"
-              className="text-gray-700 hover:text-blue-600 font-medium transition-colors no-underline"
+              className="text-gray-700 hover:text-blue-600 font-medium transition-colors no-underline mx-4"
             >
               Events
             </Link>

@@ -16,6 +16,8 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "start": "turbo run start",
+    "start:prod": "pnpm db:setup && pnpm start",
+    "db:setup": "cd packages/database && pnpm db:setup && cd ../..",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types"

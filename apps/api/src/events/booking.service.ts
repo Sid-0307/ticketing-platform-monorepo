@@ -79,12 +79,12 @@ export class BookingsService {
         })
         .where(eq(events.id, dto.eventId));
 
+      await this.redisService.delPattern("events:*");
+      await this.redisService.delPattern("event:*");
+      await this.redisService.delPattern("pricing:*");
+
       return bookingResult[0];
     });
-
-    await this.redisService.delPattern("events:*");
-    await this.redisService.delPattern("event:*");
-    await this.redisService.delPattern("pricing:*");
 
     return result;
   }

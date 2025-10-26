@@ -32,6 +32,7 @@ export class EventsService {
       throw new Error("Failed to create event");
     }
 
+    await this.redisService.del("events:all");
     await this.redisService.delPattern("events:*");
     await this.redisService.delPattern("event:*");
 
@@ -47,8 +48,6 @@ export class EventsService {
       .from(events)
       .where(eq(events.id, eventId))
       .for("update");
-
-    await this.redisService.del(`event:${eventId}`);
 
     return event || null;
   }

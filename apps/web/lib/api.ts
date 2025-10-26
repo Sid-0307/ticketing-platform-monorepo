@@ -10,7 +10,10 @@ import {
   SystemSummary,
 } from "../types/index";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_BASE_URL =
+  typeof window === "undefined"
+    ? process.env.API_URL || "http://api:3001"
+    : process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 class ApiError extends Error {
   constructor(
@@ -28,8 +31,10 @@ async function fetcher<T>(endpoint: string, options?: RequestInit): Promise<T> {
   try {
     const response = await fetch(url, {
       ...options,
+      cache: "no-store", // ← ADD THIS
       headers: {
         "Content-Type": "application/json",
+        "Cache-Control": "no-cache", // ← ADD THIS
         ...options?.headers,
       },
     });

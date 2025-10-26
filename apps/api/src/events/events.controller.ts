@@ -12,7 +12,17 @@ import { exec } from "child_process";
 import { promisify } from "util";
 
 const execAsync = promisify(exec);
-
+@Controller("health")
+export class HealthController {
+  @Get()
+  check() {
+    return {
+      status: "ok",
+      timestamp: new Date().toISOString(),
+      service: "ticketing-api",
+    };
+  }
+}
 @Controller("events")
 export class EventsController {
   constructor(
