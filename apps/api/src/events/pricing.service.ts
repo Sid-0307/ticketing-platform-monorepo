@@ -28,8 +28,10 @@ export class PricingService {
 
   private calculateTimeAdjustment(eventDate: Date): number {
     const now = new Date();
+    const eventDateObj =
+      typeof eventDate === "string" ? new Date(eventDate) : eventDate;
     const daysUntilEvent = Math.ceil(
-      (eventDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      (eventDateObj.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
     );
 
     if (daysUntilEvent < 0) {

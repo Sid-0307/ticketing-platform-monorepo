@@ -7,6 +7,7 @@ import { db, bookings, events, Booking } from "@repo/database";
 import { eq } from "drizzle-orm";
 import { PricingService } from "./pricing.service";
 import { EventsService } from "./events.service";
+import { RedisService } from "../redis/redis.service";
 
 interface CreateBookingDto {
   eventId: number;
@@ -18,7 +19,8 @@ interface CreateBookingDto {
 export class BookingsService {
   constructor(
     private readonly pricingService: PricingService,
-    private readonly eventsService: EventsService
+    private readonly eventsService: EventsService,
+    private readonly redisService: RedisService
   ) {}
 
   async create(dto: CreateBookingDto): Promise<Booking> {
@@ -34,7 +36,8 @@ export class BookingsService {
       throw new BadRequestException("Invalid email format");
     }
 
-    return await db.transaction(async (tx) => {
+    // Execute transaction FIRST
+    const result = await db.transaction(async (tx) => {
       const event = await this.eventsService.lockEventForUpdate(
         dto.eventId,
         tx
@@ -78,6 +81,12 @@ export class BookingsService {
 
       return bookingResult[0];
     });
+
+    await this.redisService.delPattern("events:*");
+    await this.redisService.delPattern("event:*");
+    await this.redisService.delPattern("pricing:*");
+
+    return result;
   }
 
   async findByEventId(eventId: number): Promise<Booking[]> {
