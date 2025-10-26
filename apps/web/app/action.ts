@@ -8,11 +8,10 @@ export async function createBooking(data: CreateBookingDto) {
   try {
     const booking = await api.bookings.create(data);
 
-    // Revalidate ALL relevant pages
     revalidatePath("/"); // Homepage
     revalidatePath("/events"); // Events list
     revalidatePath(`/events/${data.eventId}`); // Specific event
-    revalidatePath("/my-bookings"); // My bookings (in case user checks)
+    revalidatePath("/my-bookings"); // My bookings
 
     return {
       success: true,

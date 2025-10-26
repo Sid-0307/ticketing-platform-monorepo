@@ -1,5 +1,3 @@
-// apps/web/src/lib/api.ts
-
 import {
   ApiResponse,
   EventWithPricing,
@@ -31,10 +29,10 @@ async function fetcher<T>(endpoint: string, options?: RequestInit): Promise<T> {
   try {
     const response = await fetch(url, {
       ...options,
-      cache: "no-store", // ← ADD THIS
+      cache: "no-store",
       headers: {
         "Content-Type": "application/json",
-        "Cache-Control": "no-cache", // ← ADD THIS
+        "Cache-Control": "no-cache",
         ...options?.headers,
       },
     });
@@ -64,7 +62,6 @@ async function fetcher<T>(endpoint: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  // Events
   events: {
     getAll: async (): Promise<EventWithPricing[]> => {
       const response =
@@ -86,7 +83,6 @@ export const api = {
     },
   },
 
-  // Bookings
   bookings: {
     create: async (data: CreateBookingDto): Promise<Booking> => {
       const response = await fetcher<ApiResponse<Booking>>("/bookings", {
@@ -111,7 +107,6 @@ export const api = {
     },
   },
 
-  // Analytics
   analytics: {
     getEventAnalytics: async (eventId: number): Promise<EventAnalytics> => {
       const response = await fetcher<ApiResponse<EventAnalytics>>(
@@ -127,7 +122,6 @@ export const api = {
     },
   },
 
-  // Development
   seed: async (): Promise<any> => {
     const response = await fetcher<any>("/seed", {
       method: "POST",

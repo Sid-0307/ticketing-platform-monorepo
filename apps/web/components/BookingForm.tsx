@@ -1,4 +1,3 @@
-// apps/web/src/components/BookingForm.tsx
 "use client";
 
 import { useState } from "react";
@@ -30,7 +29,6 @@ export default function BookingForm({ event }: { event: EventDetail }) {
       });
 
       if (result.success) {
-        // Store booking data for confirmation page
         sessionStorage.setItem(
           "lastBooking",
           JSON.stringify({

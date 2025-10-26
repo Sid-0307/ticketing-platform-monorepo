@@ -1,4 +1,3 @@
-// apps/web/app/my-bookings/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -18,7 +17,6 @@ export default function MyBookingsPage() {
   const [searched, setSearched] = useState(false);
 
   useEffect(() => {
-    // Load email from localStorage if previously used
     const savedEmail = localStorage.getItem("userEmail");
     if (savedEmail) {
       setEmail(savedEmail);
@@ -32,12 +30,10 @@ export default function MyBookingsPage() {
     setSearched(true);
 
     try {
-      // Save email for future use
       localStorage.setItem("userEmail", email);
 
       const userBookings = await api.bookings.getByEmail(email);
 
-      // Fetch event details for each booking
       const allEvents = await api.events.getAll();
       const eventsMap = new Map(allEvents.map((e) => [e.id, e]));
 

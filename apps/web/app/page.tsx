@@ -1,5 +1,3 @@
-// apps/web/src/app/page.tsx
-
 import Link from "next/link";
 import { api } from "../lib/api";
 

@@ -1,5 +1,3 @@
-// apps/web/src/app/events/[id]/page.tsx
-
 import { api } from "../../../lib/api";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";

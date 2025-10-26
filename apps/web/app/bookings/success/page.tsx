@@ -1,4 +1,3 @@
-// apps/web/src/app/bookings/success/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";

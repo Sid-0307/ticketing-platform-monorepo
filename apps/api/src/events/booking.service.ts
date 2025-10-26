@@ -36,7 +36,6 @@ export class BookingsService {
       throw new BadRequestException("Invalid email format");
     }
 
-    // Execute transaction FIRST
     const result = await db.transaction(async (tx) => {
       const event = await this.eventsService.lockEventForUpdate(
         dto.eventId,

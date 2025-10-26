@@ -1,5 +1,3 @@
-// apps/web/src/types/index.ts
-
 export interface Event {
   id: number;
   name: string;

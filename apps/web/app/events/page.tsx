@@ -1,5 +1,3 @@
-// apps/web/src/app/events/page.tsx
-
 import { api } from "../../lib/api";
 import { EventWithPricing } from "../../types/index";
 import Link from "next/link";

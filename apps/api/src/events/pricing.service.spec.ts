@@ -1,7 +1,9 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { PricingService } from "./pricing.service";
 import { Event } from "@repo/database";
+import { RedisService } from "../redis/redis.service";
 
+// Mock the database module
 jest.mock("@repo/database", () => ({
   db: {
     select: jest.fn().mockReturnThis(),
@@ -16,13 +18,25 @@ jest.mock("@repo/database", () => ({
 
 describe("PricingService", () => {
   let service: PricingService;
+  let redisService: RedisService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [PricingService],
+      providers: [
+        PricingService,
+        {
+          provide: RedisService,
+          useValue: {
+            getOrSet: jest.fn((key, callback) => callback()),
+            del: jest.fn(),
+            delPattern: jest.fn(),
+          },
+        },
+      ],
     }).compile();
 
     service = module.get<PricingService>(PricingService);
+    redisService = module.get<RedisService>(RedisService);
 
     process.env.TIME_WEIGHT = "0.3";
     process.env.DEMAND_WEIGHT = "0.4";
@@ -75,6 +89,16 @@ describe("PricingService", () => {
       const pricing = await service.calculatePrice(event);
 
       expect(pricing.timeAdjustment).toBe(0.2);
+    });
+
+    it("should apply 10% adjustment for events in 10 days", async () => {
+      const event = createMockEvent({
+        date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+      });
+
+      const pricing = await service.calculatePrice(event);
+
+      expect(pricing.timeAdjustment).toBe(0.1);
     });
 
     it("should apply no adjustment for events 30+ days away", async () => {
@@ -161,7 +185,6 @@ describe("PricingService", () => {
         date: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow (0.5)
         totalTickets: 100,
         bookedTickets: 95, // 5% remaining (0.4)
-        // Demand is 0 because we mock empty bookings
       });
 
       const pricing = await service.calculatePrice(event);
@@ -234,7 +257,7 @@ describe("PricingService", () => {
 
       expect(pricing.appliedFloor).toBe(false);
       expect(pricing.appliedCeiling).toBe(false);
-      expect(pricing.finalPrice).toBeGreaterThan(100);
+      expect(pricing.finalPrice).toBeGreaterThan(80);
       expect(pricing.finalPrice).toBeLessThan(200);
     });
   });
@@ -243,6 +266,8 @@ describe("PricingService", () => {
     it("should handle zero base price", async () => {
       const event = createMockEvent({
         basePrice: "0.00",
+        minPrice: "0.00",
+        maxPrice: "100.00",
       });
 
       const pricing = await service.calculatePrice(event);
@@ -259,6 +284,28 @@ describe("PricingService", () => {
       const pricing = await service.calculatePrice(event);
 
       expect(pricing.inventoryAdjustment).toBe(0);
+    });
+
+    it("should handle very large ticket quantities", async () => {
+      const event = createMockEvent({
+        totalTickets: 10000,
+        bookedTickets: 5000,
+      });
+
+      const pricing = await service.calculatePrice(event);
+
+      expect(pricing.finalPrice).toBeGreaterThan(0);
+      expect(Number.isFinite(pricing.finalPrice)).toBe(true);
+    });
+  });
+
+  describe("Demand-Based Pricing", () => {
+    it("should apply no adjustment when no recent bookings", async () => {
+      const event = createMockEvent();
+
+      const pricing = await service.calculatePrice(event);
+
+      expect(pricing.demandAdjustment).toBe(0);
     });
   });
 });

@@ -4,7 +4,7 @@ const config: Config = {
   content: [
     "./app/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
-    "../../packages/ui/**/*.{ts,tsx}", // if you share components
+    "../../packages/ui/**/*.{ts,tsx}",
   ],
   theme: {
     extend: {},
